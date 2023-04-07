@@ -67,7 +67,7 @@
 				renderer = new THREE.WebGLRenderer();
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.outputEncoding = THREE.sRGBEncoding;
+				renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 				container.appendChild( renderer.domElement );
 
@@ -429,7 +429,7 @@
 
 				const textureCube = new THREE.CubeTextureLoader().load( urls );
 				textureCube.mapping = THREE.CubeReflectionMapping;
-				textureCube.encoding = THREE.sRGBEncoding;
+				textureCube.colorSpace = THREE.SRGBColorSpace;
 
 				const sphereMaterial = new THREE.MeshPhysicalMaterial( {
 					transparent: true,

@@ -1,4 +1,4 @@
-import { Material, ShaderMaterial, NoToneMapping } from 'three';
+import { Material, ShaderMaterial } from 'three';
 import { getNodeChildren, getCacheKey } from '../core/NodeUtils.js';
 import { attribute } from '../core/AttributeNode.js';
 import { diffuseColor } from '../core/PropertyNode.js';
@@ -8,12 +8,8 @@ import { modelViewProjection } from '../accessors/ModelViewProjectionNode.js';
 import { transformedNormalView } from '../accessors/NormalNode.js';
 import { instance } from '../accessors/InstanceNode.js';
 import { positionLocal } from '../accessors/PositionNode.js';
-import { reference } from '../accessors/ReferenceNode.js';
 import { skinning } from '../accessors/SkinningNode.js';
 import { texture } from '../accessors/TextureNode.js';
-import { toneMapping } from '../display/ToneMappingNode.js';
-import { rangeFog } from '../fog/FogRangeNode.js';
-import { densityFog } from '../fog/FogExp2Node.js';
 import { lightsWithoutWrap } from '../lighting/LightsNode.js';
 import AONode from '../lighting/AONode.js';
 import EnvironmentNode from '../lighting/EnvironmentNode.js';
@@ -52,30 +48,28 @@ class NodeMaterial extends ShaderMaterial {
 
 	construct( builder ) {
 
-		// < STACKS >
-
-		const vertexStack = builder.createStack();
-		const fragmentStack = builder.createStack();
-
 		// < VERTEX STAGE >
 
-		vertexStack.outputNode = this.constructPosition( builder, vertexStack );
+		builder.addStack();
+
+		builder.stack.outputNode = this.constructPosition( builder );
+
+		builder.addFlow( 'vertex', builder.removeStack() );
 
 		// < FRAGMENT STAGE >
 
-		if ( this.normals === true ) this.constructNormal( builder, fragmentStack );
+		builder.addStack();
 
-		this.constructDiffuseColor( builder, fragmentStack );
-		this.constructVariants( builder, fragmentStack );
+		if ( this.normals === true ) this.constructNormal( builder );
 
-		const outgoingLightNode = this.constructLighting( builder, fragmentStack );
+		this.constructDiffuseColor( builder );
+		this.constructVariants( builder );
 
-		fragmentStack.outputNode = this.constructOutput( builder, fragmentStack, outgoingLightNode, diffuseColor.a );
+		const outgoingLightNode = this.constructLighting( builder );
 
-		// < FLOW >
+		builder.stack.outputNode = this.constructOutput( builder, outgoingLightNode, diffuseColor.a );
 
-		builder.addFlow( 'vertex', vertexStack );
-		builder.addFlow( 'fragment', fragmentStack );
+		builder.addFlow( 'fragment', builder.removeStack() );
 
 	}
 
@@ -109,13 +103,13 @@ class NodeMaterial extends ShaderMaterial {
 
 	}
 
-	constructDiffuseColor( builder, stack ) {
+	constructDiffuseColor( { stack, geometry } ) {
 
 		let colorNode = this.colorNode ? vec4( this.colorNode ) : materialColor;
 
 		// VERTEX COLORS
 
-		if ( this.vertexColors === true && builder.geometry.hasAttribute( 'color' ) ) {
+		if ( this.vertexColors === true && geometry.hasAttribute( 'color' ) ) {
 
 			colorNode = vec4( colorNode.xyz.mul( attribute( 'color' ) ), colorNode.a );
 
@@ -148,7 +142,7 @@ class NodeMaterial extends ShaderMaterial {
 
 	}
 
-	constructNormal( builder, stack ) {
+	constructNormal( { stack } ) {
 
 		// NORMAL VIEW
 
@@ -162,9 +156,8 @@ class NodeMaterial extends ShaderMaterial {
 
 	constructLights( builder ) {
 
-		let lightsNode = this.lightsNode || builder.lightsNode;
+		const envNode = this.envNode || builder.environmentNode;
 
-		const envNode = this.envNode || builder.scene.environmentNode;
 		const materialLightsNode = [];
 
 		if ( envNode ) {
@@ -178,6 +171,8 @@ class NodeMaterial extends ShaderMaterial {
 			materialLightsNode.push( new AONode( texture( builder.material.aoMap ) ) );
 
 		}
+
+		let lightsNode = this.lightsNode || builder.lightsNode;
 
 		if ( materialLightsNode.length > 0 ) {
 
@@ -226,21 +221,15 @@ class NodeMaterial extends ShaderMaterial {
 
 	}
 
-	constructOutput( builder, stack, outgoingLight, opacity ) {
+	constructOutput( builder, outgoingLight, opacity ) {
 
 		const renderer = builder.renderer;
 
 		// TONE MAPPING
 
-		let toneMappingNode = renderer.toneMappingNode;
+		const toneMappingNode = builder.toneMappingNode;
 
-		if ( ! toneMappingNode && renderer.toneMapping !== NoToneMapping ) {
-
-			toneMappingNode = toneMapping( renderer.toneMapping, reference( 'toneMappingExposure', 'float', renderer ), outgoingLight );
-
-		}
-
-		if ( toneMappingNode && toneMappingNode.isNode === true ) {
+		if ( toneMappingNode ) {
 
 			outgoingLight = toneMappingNode.context( { color: outgoingLight } );
 
@@ -252,33 +241,13 @@ class NodeMaterial extends ShaderMaterial {
 
 		// ENCODING
 
-		outputNode = outputNode.colorSpace( renderer.outputEncoding );
+		outputNode = outputNode.colorSpace( renderer.outputColorSpace );
 
 		// FOG
 
-		let fogNode = builder.fogNode;
+		const fogNode = builder.fogNode;
 
-		if ( ( fogNode && fogNode.isNode !== true ) && builder.scene.fog ) {
-
-			const fog = builder.scene.fog;
-
-			if ( fog.isFogExp2 ) {
-
-				fogNode = densityFog( reference( 'color', 'color', fog ), reference( 'density', 'float', fog ) );
-
-			} else if ( fog.isFog ) {
-
-				fogNode = rangeFog( reference( 'color', 'color', fog ), reference( 'near', 'float', fog ), reference( 'far', 'float', fog ) );
-
-			} else {
-
-				console.error( 'NodeMaterial: Unsupported fog configuration.', fog );
-
-			}
-
-		}
-
-		if ( fogNode ) outputNode = vec4( fogNode.mix( outputNode.rgb ), outputNode.a );
+		if ( fogNode ) outputNode = vec4( fogNode.mixAssign( outputNode.rgb ), outputNode.a );
 
 		return outputNode;
 
@@ -417,6 +386,6 @@ export function createNodeMaterialFromType( type ) {
 
 	}
 
-};
+}
 
 addNodeMaterial( NodeMaterial );

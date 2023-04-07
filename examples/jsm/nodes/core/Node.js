@@ -42,11 +42,19 @@ class Node {
 
 			if ( index !== undefined ) {
 
-				yield { childNode, replaceNode( node ) { self[ property ][ index ] = node; } };
+				yield { childNode, replaceNode( node ) {
+
+					self[ property ][ index ] = node;
+
+				} };
 
 			} else {
 
-				yield { childNode, replaceNode( node ) { self[ property ] = node; } };
+				yield { childNode, replaceNode( node ) {
+
+					self[ property ] = node;
+
+				} };
 
 			}
 
@@ -78,7 +86,7 @@ class Node {
 
 	}
 
-	getUpdateType( /*builder*/ ) {
+	getUpdateType() {
 
 		return this.updateType;
 
@@ -168,7 +176,7 @@ class Node {
 		}
 
 		builder.addNode( this );
-		builder.addStack( this );
+		builder.addChain( this );
 
 		/* Build stages expected results:
 			- "construct"	-> Node
@@ -233,15 +241,21 @@ class Node {
 
 		}
 
-		builder.removeStack( this );
+		builder.removeChain( this );
 
 		return result;
 
 	}
 
+	getSerializeChildren() {
+
+		return getNodeChildren( this );
+
+	}
+
 	serialize( json ) {
 
-		const nodeChildren = getNodeChildren( this );
+		const nodeChildren = this.getSerializeChildren();
 
 		const inputNodes = {};
 
@@ -300,9 +314,9 @@ class Node {
 					for ( const subProperty in json.inputNodes[ property ] ) {
 
 						const uuid = json.inputNodes[ property ][ subProperty ];
-					
+
 						inputObject[ subProperty ] = nodes[ uuid ];
-					
+
 					}
 
 					this[ property ] = inputObject;
@@ -418,4 +432,4 @@ export function createNodeFromType( type ) {
 
 	}
 
-};
+}

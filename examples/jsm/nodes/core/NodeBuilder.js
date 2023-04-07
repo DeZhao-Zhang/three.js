@@ -7,7 +7,7 @@ import NodeKeywords from './NodeKeywords.js';
 import NodeCache from './NodeCache.js';
 import { NodeUpdateType, defaultBuildStages, shaderStages } from './constants.js';
 
-import { REVISION, LinearEncoding, Color, Vector2, Vector3, Vector4 } from 'three';
+import { REVISION, NoColorSpace, LinearEncoding, sRGBEncoding, SRGBColorSpace, Color, Vector2, Vector3, Vector4 } from 'three';
 
 import { stack } from './StackNode.js';
 import { maxMipLevel } from '../utils/MaxMipLevelNode.js';
@@ -32,8 +32,8 @@ class NodeBuilder {
 	constructor( object, renderer, parser ) {
 
 		this.object = object;
-		this.material = object.material || null;
-		this.geometry = object.geometry || null;
+		this.material = object && ( object.material || null );
+		this.geometry = object && ( object.geometry || null );
 		this.renderer = renderer;
 		this.parser = parser;
 
@@ -41,9 +41,10 @@ class NodeBuilder {
 		this.updateNodes = [];
 		this.hashNodes = {};
 
-		this.scene = null;
 		this.lightsNode = null;
+		this.environmentNode = null;
 		this.fogNode = null;
+		this.toneMappingNode = null;
 
 		this.vertexShader = null;
 		this.fragmentShader = null;
@@ -57,11 +58,13 @@ class NodeBuilder {
 		this.varyings = [];
 		this.vars = { vertex: [], fragment: [], compute: [] };
 		this.flow = { code: '' };
-		this.stack = [];
+		this.chaining = [];
+		this.stack = stack();
+		this.tab = '\t';
 
 		this.context = {
 			keywords: new NodeKeywords(),
-			material: object.material,
+			material: this.material,
 			getMIPLevelAlgorithmNode: ( textureNode, levelNode ) => levelNode.mul( maxMipLevel( textureNode ) )
 		};
 
@@ -75,38 +78,6 @@ class NodeBuilder {
 
 	}
 
-	get node() {
-
-		return this.stack[ this.stack.length - 1 ];
-
-	}
-
-	addStack( node ) {
-
-		/*
-		if ( this.stack.indexOf( node ) !== - 1 ) {
-
-			console.warn( 'Recursive node: ', node );
-
-		}
-		*/
-
-		this.stack.push( node );
-
-	}
-
-	removeStack( node ) {
-
-		const lastStack = this.stack.pop();
-
-		if ( lastStack !== node ) {
-
-			throw new Error( 'NodeBuilder: Invalid node stack!' );
-
-		}
-
-	}
-
 	setHashNode( node, hash ) {
 
 		this.hashNodes[ hash ] = node;
@@ -117,7 +88,7 @@ class NodeBuilder {
 
 		if ( this.nodes.indexOf( node ) === - 1 ) {
 
-			const updateType = node.getUpdateType( this );
+			const updateType = node.getUpdateType();
 
 			if ( updateType !== NodeUpdateType.NONE ) {
 
@@ -128,6 +99,38 @@ class NodeBuilder {
 			this.nodes.push( node );
 
 			this.setHashNode( node, node.getHash( this ) );
+
+		}
+
+	}
+
+	get currentNode() {
+
+		return this.chaining[ this.chaining.length - 1 ];
+
+	}
+
+	addChain( node ) {
+
+		/*
+		if ( this.chaining.indexOf( node ) !== - 1 ) {
+
+			console.warn( 'Recursive node: ', node );
+
+		}
+		*/
+
+		this.chaining.push( node );
+
+	}
+
+	removeChain( node ) {
+
+		const lastChain = this.chaining.pop();
+
+		if ( lastChain !== node ) {
+
+			throw new Error( 'NodeBuilder: Invalid node chaining!' );
 
 		}
 
@@ -207,25 +210,13 @@ class NodeBuilder {
 
 	}
 
-	getTexture( /* textureProperty, uvSnippet */ ) {
+	getTexture( /* texture, textureProperty, uvSnippet */ ) {
 
 		console.warn( 'Abstract function.' );
 
 	}
 
-	getTextureLevel( /* textureProperty, uvSnippet, levelSnippet */ ) {
-
-		console.warn( 'Abstract function.' );
-
-	}
-
-	getCubeTexture( /* textureProperty, uvSnippet */ ) {
-
-		console.warn( 'Abstract function.' );
-
-	}
-
-	getCubeTextureLevel( /* textureProperty, uvSnippet, levelSnippet */ ) {
+	getTextureLevel( /* texture, textureProperty, uvSnippet, levelSnippet */ ) {
 
 		console.warn( 'Abstract function.' );
 
@@ -353,25 +344,33 @@ class NodeBuilder {
 
 	}
 
+	/** @deprecated, r152 */
 	getTextureEncodingFromMap( map ) {
 
-		let encoding;
+		console.warn( 'THREE.NodeBuilder: Method .getTextureEncodingFromMap replaced by .getTextureColorSpaceFromMap in r152+.' );
+		return this.getTextureColorSpaceFromMap( map ) === SRGBColorSpace ? sRGBEncoding : LinearEncoding;
+
+	}
+
+	getTextureColorSpaceFromMap( map ) {
+
+		let colorSpace;
 
 		if ( map && map.isTexture ) {
 
-			encoding = map.encoding;
+			colorSpace = map.colorSpace;
 
 		} else if ( map && map.isWebGLRenderTarget ) {
 
-			encoding = map.texture.encoding;
+			colorSpace = map.texture.colorSpace;
 
 		} else {
 
-			encoding = LinearEncoding;
+			colorSpace = NoColorSpace;
 
 		}
 
-		return encoding;
+		return colorSpace;
 
 	}
 
@@ -447,9 +446,21 @@ class NodeBuilder {
 
 	}
 
-	createStack() {
+	addStack() {
 
-		return stack();
+		this.stack = stack( this.stack );
+
+		return this.stack;
+
+	}
+
+	removeStack() {
+
+		const currentStack = this.stack;
+
+		this.stack = currentStack.parent;
+
+		return currentStack;
 
 	}
 
@@ -570,15 +581,45 @@ class NodeBuilder {
 
 	}
 
-	addFlowCode( code, breakline = true ) {
+	addLineFlowCode( code ) {
 
-		if ( breakline && ! /;\s*$/.test( code ) ) {
+		if ( code === '' ) return this;
 
-			code += ';\n\t';
+		code = this.tab + code;
+
+		if ( ! /;\s*$/.test( code ) ) {
+
+			code = code + ';\n';
 
 		}
 
 		this.flow.code += code;
+
+		return this;
+
+	}
+
+	addFlowCode( code ) {
+
+		this.flow.code += code;
+
+		return this;
+
+	}
+
+	addFlowTab() {
+
+		this.tab += '\t';
+
+		return this;
+
+	}
+
+	removeFlowTab() {
+
+		this.tab = this.tab.slice( 0, - 1 );
+
+		return this;
 
 	}
 
@@ -628,7 +669,7 @@ class NodeBuilder {
 
 		if ( propertyName !== null ) {
 
-			flowData.code += `${propertyName} = ${flowData.result};\n\t`;
+			flowData.code += `${propertyName} = ${flowData.result};\n` + this.tab;
 
 		}
 

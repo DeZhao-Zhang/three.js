@@ -119,7 +119,7 @@
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
-				renderer.outputEncoding = THREE.sRGBEncoding;
+				renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 				//
 
@@ -162,7 +162,7 @@
 				];
 
 				const reflectionCube = new THREE.CubeTextureLoader().load( urls );
-				reflectionCube.encoding = THREE.sRGBEncoding;
+				reflectionCube.colorSpace = THREE.SRGBColorSpace;
 
 				// textures
 

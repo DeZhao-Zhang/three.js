@@ -50,7 +50,7 @@
 				renderer.shadowMap.enabled = true;
 				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-				renderer.outputEncoding = THREE.sRGBEncoding;
+				renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 				renderer.toneMapping = THREE.ACESFilmicToneMapping;
 				renderer.toneMappingExposure = 1;
@@ -84,7 +84,7 @@
 					const texture = loader.load( filename );
 					texture.minFilter = THREE.LinearFilter;
 					texture.magFilter = THREE.LinearFilter;
-					texture.encoding = THREE.sRGBEncoding;
+					texture.colorSpace = THREE.SRGBColorSpace;
 
 					textures[ filename ] = texture;
 
