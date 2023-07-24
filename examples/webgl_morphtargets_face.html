@@ -66,9 +66,7 @@
 				const renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
-
 				renderer.toneMapping = THREE.ACESFilmicToneMapping;
-				renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 				container.appendChild( renderer.domElement );
 
@@ -107,7 +105,7 @@
 
 					} );
 
-				const environment = new RoomEnvironment();
+				const environment = new RoomEnvironment( renderer );
 				const pmremGenerator = new THREE.PMREMGenerator( renderer );
 
 				scene.background = new THREE.Color( 0x666666 );

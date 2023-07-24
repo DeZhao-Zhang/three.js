@@ -41,7 +41,7 @@
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0x999999 );
 
-				const light = new THREE.DirectionalLight( 0xffffff );
+				const light = new THREE.DirectionalLight( 0xffffff, 3 );
 				light.position.set( 0.5, 1.0, 0.5 ).normalize();
 
 				scene.add( light );
@@ -53,11 +53,10 @@
 
 				scene.add( camera );
 
-				const grid = new THREE.GridHelper( 50, 50, 0xffffff, 0x333333 );
+				const grid = new THREE.GridHelper( 50, 50, 0xffffff, 0x7b7b7b );
 				scene.add( grid );
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.outputColorSpace = THREE.SRGBColorSpace;
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				document.body.appendChild( renderer.domElement );

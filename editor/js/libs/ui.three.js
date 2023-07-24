@@ -76,18 +76,22 @@ class UITexture extends UISpan {
 
 				reader.addEventListener( 'load', function ( event ) {
 
-					const canvas = new TGALoader().parse( event.target.result );
+					const loader = new TGALoader();
+					loader.load( event.target.result, function ( texture ) {
 
-					const texture = new THREE.CanvasTexture( canvas, mapping );
-					texture.sourceFile = file.name;
+						texture.colorSpace = THREE.SRGBColorSpace;
+						texture.sourceFile = file.name;
 
-					scope.setValue( texture );
+						scope.setValue( texture );
 
-					if ( scope.onChangeCallback ) scope.onChangeCallback( texture );
+						if ( scope.onChangeCallback ) scope.onChangeCallback( texture );
+
+
+					} );
 
 				}, false );
 
-				reader.readAsArrayBuffer( file );
+				reader.readAsDataURL( file );
 
 			} else if ( file.type.match( 'image.*' ) ) {
 
@@ -178,13 +182,13 @@ class UITexture extends UISpan {
 
 	}
 
-	setEncoding( encoding ) {
+	setColorSpace( colorSpace ) {
 
 		const texture = this.getValue();
 
 		if ( texture !== null ) {
 
-			texture.encoding = encoding;
+			texture.colorSpace = colorSpace;
 
 		}
 
@@ -275,12 +279,12 @@ class UICubeTexture extends UIElement {
 
 	}
 
-	setEncoding( encoding ) {
+	setColorSpace( colorSpace ) {
 
 		const cubeTexture = this.getValue();
 		if ( cubeTexture !== null ) {
 
-			cubeTexture.encoding = encoding;
+			cubeTexture.colorSpace = colorSpace;
 
 		}
 
@@ -926,7 +930,6 @@ function renderToCanvas( texture ) {
 	if ( renderer === undefined ) {
 
 		renderer = new THREE.WebGLRenderer();
-		renderer.outputEncoding = THREE.sRGBEncoding;
 
 	}
 
