@@ -98,43 +98,36 @@ const exceptionList = [
 	'webgl_shadowmap_progressive',
 	'webgl_test_memory2',
 	'webgl_tiled_forward',
+	'webgl2_volume_instancing',
+	'webgl2_multisampled_renderbuffers',
+	'webgl_points_dynamic',
 
 	// TODO: implement determinism for setTimeout and setInterval
 	// could it fix some examples from above?
 	'physics_rapier_instancing',
 
 	// Awaiting for WebGPU support
-	'webgpu_audio_processing',
 	'webgpu_backdrop',
 	'webgpu_backdrop_area',
 	'webgpu_clearcoat',
-	'webgpu_compute',
-	'webgpu_cubemap_adjustments',
+	'webgpu_compute_audio',
+	'webgpu_compute_particles',
+	'webgpu_compute_particles_rain',
+	'webgpu_compute_points',
+	'webgpu_compute_texture',
+	'webgpu_compute_texture_pingpong',
 	'webgpu_cubemap_dynamic',
-	'webgpu_cubemap_mix',
-	'webgpu_depth_texture',
-	'webgpu_equirectangular',
-	'webgpu_instance_mesh',
-	'webgpu_instance_uniform',
-	'webgpu_lights_custom',
-	'webgpu_lights_ies_spotlight',
-	'webgpu_lights_phong',
-	'webgpu_lights_selective',
 	'webgpu_loader_gltf',
 	'webgpu_loader_gltf_compressed',
+	'webgpu_loader_gltf_iridescence',
 	'webgpu_loader_gltf_sheen',
 	'webgpu_materials',
 	'webgpu_materials_video',
-	'webgpu_morphtargets',
-	'webgpu_particles',
-	'webgpu_rtt',
 	'webgpu_sandbox',
-	'webgpu_shadowmap',
-	'webgpu_skinning',
-	'webgpu_skinning_instancing',
-	'webgpu_skinning_points',
+	'webgpu_shadertoy',
 	'webgpu_sprites',
 	'webgpu_tsl_editor',
+	'webgpu_tsl_transpiler',
 	'webgpu_video_panorama'
 
 ];
@@ -598,7 +591,7 @@ async function makeAttempt( pages, failedScreenshots, cleanPage, isMakeScreensho
 
 		}
 
-	} catch ( e ) { 
+	} catch ( e ) {
 
 		if ( attemptID === numAttempts - 1 ) {
 
